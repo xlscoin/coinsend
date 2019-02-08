@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-'''
-Coin Send script, adapted from makechange.py by MadHatter with small additions by Morpheus, 2019
-Original script written and copyright; The TurtleCoin Developers 2018
 
-Usage: python3 coinsend.py 10000 XL4rXLnvW2QNYrFka6ttypdJpPt2LoyUsYiiBbxCVR8bexF38Km2nv2KDYkuQn2roBLzzQjDCXqVfWMz3e1Dgo6y12JADwq9R
-Or make executable (chmod +x coinsend.py) and run from  your command interpreter
+#'''
+#Coin Send script, adapted from makechange.py by MadHatter with small additions by Morpheus, 2019
+#Original script written and copyright; The TurtleCoin Developers 2018
 
-Send large amounts of coins from local wallet to public address.
+#Usage: python3 coinsend.py 10000 XL3wePjyFUEUJHCYnnVWoghye8kR3xPEwQXBmkrGBxSfUjVQ31DhdjhDNAuDComxXybS4CugJWa9wUJ7EibnbWz91swXQA24J 
+#Or make executable (chmod +x coinsend.py) and run from  your command interpreter
 
-Script communicates with WalletGreen.  Start the wallet service something like below:
+#Send large amounts of coins from local wallet to public address.
 
-./xls-service -w testnetA.wallet -p yourpass --rpc-password test --bind-port 4456
-'''
+#Script communicates with WalletGreen.  Start the wallet service something like below:
+
+#./xls-service -w testnetA.wallet -p yourpass --rpc-password test --bind-port 4456
+#'''
 
 import requests
 import json
@@ -26,7 +27,6 @@ addressB = sys.argv[2]
 moveDecimal = 100000                # Coinunits TRTL has 2 decimals so 100 is the divide/multiply factor
 
 TransferAmount = float(sys.argv[1]) * moveDecimal     # setup Amount to be transfered
-
 #TransferAmount = 9.9 * moveDecimal
 paymentID =""                                         # setup a PaymentID added to tx, can be empty
 
@@ -38,7 +38,7 @@ maxAmount = 10000 * moveDecimal     # max Amount to be transfered every  xfer if
 minAmount = 1000 * moveDecimal      # min Amount to sent if funds are locked
 
 minanonymity = 1                    # define min mixin 
-maxanonymity = 3                    # define max mixin
+maxanonymity = 7                    # define max mixin
 #anonymity = maxanonymity
 
 fee = 10                            # atomic units, Fee , TRTL would be 0.10 as the tx network fee
@@ -189,7 +189,7 @@ def sendTXs(host, port, rpcPassword, sender, receiver):
 
 # Wallet service setting 
 walletdHostA = "127.0.0.1"
-walletdPortA = "4456"
+walletdPortA = "4455"
 rpcPasswordA = "verysecret"
 
 addressA = getAddress(walletdHostA, walletdPortA, rpcPasswordA)
