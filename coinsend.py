@@ -20,7 +20,7 @@ import time
 import sys
 from threading import Thread
 
-#addressB = sys.argv[2]
+addressB = sys.argv[2]
 #addressB = "XL3wePjyFUEUJHCYnnVWoghye8kR3xPEwQXBmkrGBxSfUjVQ31DhdjhDNAuDComxXybS4CugJWa9wUJ7EibnbWz91swXQA24J"
 
 moveDecimal = 100000                # Coinunits TRTL has 2 decimals so 100 is the divide/multiply factor
