@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 '''
 Coin Send script, adapted from makechange.py by MadHatter with small additions by Morpheus, 2019
 Original script written and copyright; The TurtleCoin Developers 2018
@@ -21,22 +20,28 @@ import time
 import sys
 from threading import Thread
 
-addressB = sys.argv[2]
-moveDecimal = 100000             # Coinunits TRTL has 2 decimals so 100 is the divide/multiply factor
+#addressB = sys.argv[2]
+#addressB = "XL3wePjyFUEUJHCYnnVWoghye8kR3xPEwQXBmkrGBxSfUjVQ31DhdjhDNAuDComxXybS4CugJWa9wUJ7EibnbWz91swXQA24J"
 
-TransferAmount = int(sys.argv[1]) * moveDecimal       # setup Amount to be transfered
+moveDecimal = 100000                # Coinunits TRTL has 2 decimals so 100 is the divide/multiply factor
 
+TransferAmount = float(sys.argv[1]) * moveDecimal     # setup Amount to be transfered
+
+#TransferAmount = 9.9 * moveDecimal
+paymentID =""                                         # setup a PaymentID added to tx, can be empty
 
 # Forks adjust as needed
 
-Amount = int(TransferAmount)             # convert to int
+Amount = int(TransferAmount)        # convert to int
 
 maxAmount = 10000 * moveDecimal     # max Amount to be transfered every  xfer if Amount to big, < or = Amount !!
-minAmount = 1000 * moveDecimal     # min Amount to sent if funds are locked
+minAmount = 1000 * moveDecimal      # min Amount to sent if funds are locked
 
+minanonymity = 1                    # define min mixin 
+maxanonymity = 3                    # define max mixin
+#anonymity = maxanonymity
 
-anonymity = 1
-fee = 10                        # atomic units, Fee , TRTL would be 0.10 as the tx network fee
+fee = 10                            # atomic units, Fee , TRTL would be 0.10 as the tx network fee
 
 def getAddress(host, port, rpcPassword):
     payload = {
@@ -120,6 +125,8 @@ def sendTXs(host, port, rpcPassword, sender, receiver):
     amountcount = 0          #init CountTransfer
     amount = 0               #init next tx amount
 
+    anonymity = maxanonymity # set mixing to max mixin
+    
     while(amountcount != Amount and amountrest != 0):
 
         if( amount != 0 and amountrest > 0):
@@ -131,7 +138,9 @@ def sendTXs(host, port, rpcPassword, sender, receiver):
             params = {'transfers': [{'address': receiver, 'amount': amount}],
                       'fee': fee,
                       'anonymity': anonymity,
-                      'changeAddress': sender}
+                      'changeAddress': sender,
+                      'paymentId': paymentID
+                      }
 
             value = sendTransaction(host, port, rpcPassword, **params)
 
@@ -150,24 +159,39 @@ def sendTXs(host, port, rpcPassword, sender, receiver):
                 else:
                     amount = maxAmount              # set max tx amount manual by defenition above
 
-                print("A error happend, waiting for " + str(sleeptime) + " msec and sending " + str(amount / moveDecimal))
+                print("A error happened, waiting for " + str(sleeptime) + " sec and sending " + str(amount / moveDecimal))
                 time.sleep(sleeptime)
 
-            elif(value < 0 and value == -9):
+            elif(value < 0 and value == -9):        #Wrong Amount , not enough funds
                 sleeptime += 1
-                amount = minAmount #amountrest #minAmount
-                print("Not enough funds or funds locked waiting for " + str(sleeptime) + " msec and sending " + str(amount / moveDecimal))
+                if (amountrest < minAmount):        #check if amountrest < minAmount
+                    amount = amountrest
+                else:
+                    amount = minAmount              #amountrest #minAmount
+                print("Not enought funds or funds locked, waiting for " + str(sleeptime) + " sec and sending " + str(amount / moveDecimal))
                 time.sleep(sleeptime)
+            
+            elif(value < 0 and value == -32):       # Mixin above maximum allowed threshold 
+                print("Anonymity Error , mixin " + str(anonymity) + " reducing ..")
+                if (anonymity > minanonymity):  
+                    anonymity -= 1                  # decrement mixing
+                else:
+                    anonymity = minanonymity
+                print("Anonymity set to mixin " + str(anonymity))
+        
         else:
             amount = amountrest                     #set first fullamount to try tx
 
     print("END Transfered Amount = " + str(amountcount / moveDecimal))
+    if (paymentID != ""): print("used Payment ID = " + paymentID)
+    print("Anonymity used " + str(anonymity))
 
 
-
+# Wallet service setting 
 walletdHostA = "127.0.0.1"
 walletdPortA = "4456"
-rpcPasswordA = "test"
+rpcPasswordA = "verysecret"
+
 addressA = getAddress(walletdHostA, walletdPortA, rpcPasswordA)
 
 Thread(target=sendTXs, args=(walletdHostA, walletdPortA, rpcPasswordA,
