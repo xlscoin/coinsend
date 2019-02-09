@@ -27,7 +27,7 @@ addressB = sys.argv[2]
 moveDecimal = 100000                # Coinunits TRTL has 2 decimals so 100 is the divide/multiply factor
 
 TransferAmount = float(sys.argv[1]) * moveDecimal     # setup Amount to be transfered
-#TransferAmount = 9.9 * moveDecimal
+#TransferAmount = 1009.9 * moveDecimal
 paymentID =""                                         # setup a PaymentID added to tx, can be empty
 
 # Forks adjust as needed
@@ -38,7 +38,7 @@ maxAmount = 10000 * moveDecimal     # max Amount to be transfered every  xfer if
 minAmount = 1000 * moveDecimal      # min Amount to sent if funds are locked
 
 minanonymity = 1                    # define min mixin 
-maxanonymity = 7                    # define max mixin
+maxanonymity = 10                    # define max mixin
 #anonymity = maxanonymity
 
 fee = 10                            # atomic units, Fee , TRTL would be 0.10 as the tx network fee
@@ -66,6 +66,35 @@ def getAddress(host, port, rpcPassword):
     else:
         return response['result']['addresses'][0]
 
+
+def getBalance(host, port, rpcPassword, address):
+    payload = {
+            'jsonrpc': '2.0',
+            'method': "getBalance",
+            'password': rpcPassword,
+            'id': 'test',
+            'params': {'address': address}
+            }
+
+    url = 'http://' + host + ':' + port + '/json_rpc'
+
+    response = requests.post(
+        url, data=json.dumps(payload),
+        headers={'content-type': 'application/json'}
+    ).json()
+
+    #debug
+    #pretty_data = json.dumps(response, indent=4)
+    #print (pretty_data)
+    
+    
+    if 'error' in response:
+        print(response['error'])
+        print('Failed to getBalance, exiting')
+        sys.exit()
+    else:
+        return response
+    
 
 def sendTransaction(host, port, rpcPassword, **kwargs):
     payload = {
@@ -98,17 +127,21 @@ def sendTransaction(host, port, rpcPassword, **kwargs):
 
 
     if 'error' in response:
-        if (response['error']['data']['application_code'] == 9):
+        if (response['error']['data']['application_code'] == 6):    
+            print(response['error']['message'])         #Mixin Count to Big 
+            return -6
+
+        elif (response['error']['data']['application_code'] == 8):
+            print(response['error']['message'])         #Transaction size is too big
+            return -8
+        
+        elif (response['error']['data']['application_code'] == 9):
             print(response['error']['message'])         #Wrong Amount , not enough funds
             return -9
 
         elif (response['error']['data']['application_code'] == 32):
             print(response['error']['message'])         #Mixin above maximum allowed threshold
             return -32
-
-        elif (response['error']['data']['application_code'] == 8):
-            print(response['error']['message'])         #Transaction size is too big
-            return -8
 
     # no error
     else:
@@ -131,6 +164,7 @@ def sendTXs(host, port, rpcPassword, sender, receiver):
 
         if( amount != 0 and amountrest > 0):
 
+            
             print("Start to transfer Amount = " +str(amount / moveDecimal))
             print("Amount already transfered = " +str(amountcount /moveDecimal))
             print("Amount not transfered = " +str(amountrest /moveDecimal))
@@ -171,28 +205,50 @@ def sendTXs(host, port, rpcPassword, sender, receiver):
                 print("Not enought funds or funds locked, waiting for " + str(sleeptime) + " sec and sending " + str(amount / moveDecimal))
                 time.sleep(sleeptime)
             
-            elif(value < 0 and value == -32):       # Mixin above maximum allowed threshold 
+            elif(value < 0 and (value == -32 or value == -6) ):       # Mixin above maximum allowed threshold OR #Mixin Count to Big 
                 print("Anonymity Error , mixin " + str(anonymity) + " reducing ..")
                 if (anonymity > minanonymity):  
-                    anonymity -= 1                  # decrement mixing
+                    anonymity -= 1                                    # decrement mixing
                 else:
                     anonymity = minanonymity
                 print("Anonymity set to mixin " + str(anonymity))
         
         else:
-            amount = amountrest                     #set first fullamount to try tx
+            amount = amountrest                                       #set first fullamount to try tx
 
     print("END Transfered Amount = " + str(amountcount / moveDecimal))
     if (paymentID != ""): print("used Payment ID = " + paymentID)
     print("Anonymity used " + str(anonymity))
+    print("-------------------------------------------------------------------") 
+    EndBalance = getBalance(walletdHostA, walletdPortA, rpcPasswordA, addressA)
+    print("END unlocked Balance = " + str(EndBalance['result']['availableBalance'] / moveDecimal))
+    print("END locked Balance = " + str(EndBalance['result']['lockedAmount'] / moveDecimal))
+    sumEndBalance = EndBalance['result']['availableBalance'] + EndBalance['result']['lockedAmount']
+    print("END Balance = " + str(sumEndBalance / moveDecimal))
+    print("END Fee Amount = " + str((sumBalance - sumEndBalance - amountcount) /moveDecimal))
 
-
+    
+    
+    
+    
+    
+    
+    
 # Wallet service setting 
 walletdHostA = "127.0.0.1"
 walletdPortA = "4455"
 rpcPasswordA = "verysecret"
 
 addressA = getAddress(walletdHostA, walletdPortA, rpcPasswordA)
+
+Balance = getBalance(walletdHostA, walletdPortA, rpcPasswordA, addressA)
+print("unlocked Balance = " + str(Balance['result']['availableBalance'] / moveDecimal))
+print("locked Balance = " + str(Balance['result']['lockedAmount'] / moveDecimal))
+
+sumBalance = Balance['result']['availableBalance'] + Balance['result']['lockedAmount']
+print("Balance = " + str(sumBalance / moveDecimal))
+print("-------------------------------------------------------------------")
+
 
 Thread(target=sendTXs, args=(walletdHostA, walletdPortA, rpcPasswordA,
        addressA, addressB)).start()
